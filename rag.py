@@ -53,6 +53,7 @@ def chunk_prompt(prompt: str, chunk_size: int = 2000, overlap: int = 50) -> List
             if overlap > 0:
                 # A simple overlap strategy; more sophisticated methods could be used.
                 overlap_sentences = [s for s in chunk if len(encoding.encode(s)) > 0][-overlap:]
+                print(overlap_sentences)
                 chunk = overlap_sentences
                 tokens_so_far = sum(len(encoding.encode(" " + s)) for s in overlap_sentences)
             else:
