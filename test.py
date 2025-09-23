@@ -1,6 +1,5 @@
-print("Hello world")
+import requests
 
-import ollama
-sky_embedding = ollama.embeddings(model='nomic-embed-text', prompt='The sky is blue because of rayleigh scattering')
-print(len(sky_embedding.embedding))
-print(sky_embeddin)
+response = requests.get("http://api.baiyi-sam.site/ollama")
+
+print(response.text)

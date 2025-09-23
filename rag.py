@@ -15,16 +15,16 @@ from tqdm import tqdm
 # Replace these with the names of the models you have pulled in Ollama.
 # For embeddings, you might use 'mxbai-embed-large', 'nomic-embed-text', or 'all-minilm'.
 # For chat, you might use 'llama3', 'mistral', 'gemma', etc.
-OLLAMA_EMBEDDING_MODEL = "your-ollama-embedding-model" 
-OLLAMA_CHAT_MODEL = "your-ollama-chat-model"
+OLLAMA_EMBEDDING_MODEL = "nomic-embed-text" 
+OLLAMA_CHAT_MODEL = "deepseek-r1:1.5b"
 # ------------------------------------
 
 BATCH_SIZE = 20
 
 dirname = os.path.dirname(__file__)
-pdf_file_path = os.path.join(dirname, "../data/ThePragmaticProgrammer.pdf")
+pdf_file_path = os.path.join(dirname, "./data/history of submarines.pdf")
 embedding_file_path = os.path.join(
-    dirname, "../data/ThePragmaticProgrammer.embeddings.csv"
+    dirname, "./data/history of submarines.pdf.embeddings.csv"
 )
 
 # The 'query' variable is defined but not used in the original script's main flow.
@@ -53,6 +53,7 @@ def chunk_prompt(prompt: str, chunk_size: int = 2000, overlap: int = 50) -> List
             if overlap > 0:
                 # A simple overlap strategy; more sophisticated methods could be used.
                 overlap_sentences = [s for s in chunk if len(encoding.encode(s)) > 0][-overlap:]
+                print(overlap_sentences)
                 chunk = overlap_sentences
                 tokens_so_far = sum(len(encoding.encode(" " + s)) for s in overlap_sentences)
             else:
@@ -182,13 +183,13 @@ Context:
     return int(page_num), prompt
 
 
-async def getPDFImage(pdf_file_path, page_num):
+def getPDFImage(pdf_file_path, page_num):
     """Converts a specific page of a PDF to an image."""
     pdf_images = convert_from_path(pdf_file_path, dpi=200)
     return pdf_images[page_num]
 
 
-async def ask_book(prompt, return_image=False):
+def ask_book(prompt, return_image=False):
     """
     Main function to ask a question about the book, retrieve relevant context,
     get an answer from the LLM, and optionally return an image of the page.
@@ -203,7 +204,7 @@ async def ask_book(prompt, return_image=False):
     rag_result["answer"] = response
     
     if return_image:
-        rag_result["image_data"] = await getPDFImage(pdf_file_path, page_num)
+        rag_result["image_data"] = getPDFImage(pdf_file_path, page_num)
     else:
         rag_result["image_data"] = None
         
