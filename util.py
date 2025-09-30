@@ -1,0 +1,36 @@
+
+
+import re
+from typing import List
+
+
+def chunk_text(text: str, chunk_size: int = 2000, overlap: int = 50) -> List[str]:
+    """Chunks a long text into smaller segments based on token count."""
+    print("Begin chunking the page")
+    print(f"Total length of the page: {len(text)}")
+
+
+    sentences = re.split(r"([.?!])", text)
+    sentences = ["".join(i) for i in zip(sentences[0::2], sentences[1::2])]
+
+    n_tokens = [len(sentence) for sentence in sentences]
+    chunks, tokens_so_far, chunk = [], 0, []
+
+    for sentence, token in zip(sentences, n_tokens):
+        if tokens_so_far + token > chunk_size:
+            chunks.append("".join(chunk))
+            if overlap > 0:
+                overlap_sentences = [s for s in chunk if len(s) > 0][-overlap:]
+                chunk = overlap_sentences
+                tokens_so_far = sum(len(s) for s in overlap_sentences)
+            else:
+                chunk, tokens_so_far = [], 0
+
+        chunk.append(sentence)
+        tokens_so_far += token
+
+    if chunk:
+        chunks.append("".join(chunk))
+
+    print(f"Total number of chunks: {len(chunks)}")
+    return chunks
