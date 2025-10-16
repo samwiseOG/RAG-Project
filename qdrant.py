@@ -1,7 +1,7 @@
 import uuid
 from qdrant_client import QdrantClient
 import ollama
-from qdrant_client.models import PointStruct
+from qdrant_client.models import PointStruct, Filter, FieldCondition, MatchValue
 
 
 client = QdrantClient(url="http://localhost:6333")
@@ -28,8 +28,30 @@ def upsert_point(coll_name, path, cNum, ollama_embedding_return, content):
                     vector=ollama_embedding_return.embedding, payload={"path": path, "content": content, "chunk_number": cNum})
     ],
 )
+    
+def search(coll_name:str, query_embedding: list, file_path: str= None):
+    f = None
+    if file_path:
+        f = Filter(
+            must=[
+                FieldCondition(
+                    key="path",
+                    match=MatchValue(value=file_path)
+                )
+            ]
+        )
+    return client.query_points(
+        collection_name=coll_name,
+        query=query_embedding,
+        query_filter= f,
+        with_payload=True,
+        limit=10
+    ).points
 
-
+# test_query = ollama.embeddings(model='nomic-embed-text', prompt='war in pacific').embedding
+#print(test_query)
+# print(search(coll_name="RAG-Project", query_embedding=test_query, file_path="/home/sam/Documents/Projects/RAG/RAG-Project/app/tmp/WWII-Brief-timeline-06242022.pdf"))
+#print(search(coll_name="RAG-Project", query_embedding=test_query))
 # sky_embedding = ollama.embeddings(model='nomic-embed-text', prompt='The sky is blue because of rayleigh scattering')
 
 

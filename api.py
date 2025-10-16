@@ -29,9 +29,17 @@ def load_file():
         return 'error during vectorization' + {str(e)}, 500
     return 'file uploaded', 201
 
+
+
 @app.route("/ollama", methods=['GET'])
 def get_response():
-    return str(ollama.embeddings(model='nomic-embed-text', prompt='The sky is blue because of rayleigh scattering'))
+    # return str(ollama.embeddings(model='nomic-embed-text', prompt='The sky is blue because of rayleigh scattering'))
+    query = request.args.get('query')
+    response = query_rag(query_text=query)
+    return response, 200
+
+
+
 
 if __name__ == "__main__":
     app.run(host = "0.0.0.0", port=5000)
