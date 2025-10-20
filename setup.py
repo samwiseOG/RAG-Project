@@ -54,10 +54,20 @@ def get_text_from_pdf(file: str):
 # FOLDER_PATH: str = ""
 
 # Chunk and insert into vector database
-def text_2_vec(text: str, path: str, coll_name: str):
-    chunks = chunk_text(text, chunk_size = 100, overlap=0)
+def text_2_vec(text: str, path: str, coll_name: str, chunk_size: int = 500, overlap: int = 50):
+    """
+    Convert text to vector embeddings with configurable chunking parameters.
+    
+    Args:
+        text: Source text to process
+        path: File path for reference
+        coll_name: Collection name in the vector database
+        chunk_size: Size of each chunk in tokens (default: 500)
+        overlap: Number of overlapping tokens between chunks (default: 50)
+    """
+    chunks = chunk_text(text, chunk_size=chunk_size, overlap=overlap)
     for ind, c in enumerate(chunks):
-        if c:
+        if c and len(c.strip()) > 0:  # Only process non-empty chunks
             embedding = ollama.embeddings(model="nomic-embed-text", prompt=c)
             upsert_point(coll_name=coll_name, path=path, cNum=ind, ollama_embedding_return=embedding, content=c)
 
