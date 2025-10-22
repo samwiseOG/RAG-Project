@@ -113,7 +113,7 @@ def main():
     query_rag(query_text)
 
 def enhance_query(query):
-    prompt = ENHANCEMENT_TEMPLATE.format( query)
+    prompt = ENHANCEMENT_TEMPLATE.format(query)
     # print(prompt)
 
     init_message = [{'role': 'user', 'content': prompt}]
@@ -122,6 +122,7 @@ def enhance_query(query):
         model = "deepseek-r1:1.5b",
         messages=init_message
     )['message']['content']
+    print(enhanced_query)
     return enhanced_query
 
 def query_rag(query_text: str):
