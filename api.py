@@ -35,7 +35,8 @@ def load_file():
 def get_response():
     # return str(ollama.embeddings(model='nomic-embed-text', prompt='The sky is blue because of rayleigh scattering'))
     query = request.args.get('query')
-    response = query_rag(query_text=query)
+    enhanced_query = enhance_query(query)
+    response = query_rag(query_text=enhanced_query)
     return response, 200
 
 

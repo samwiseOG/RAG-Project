@@ -71,6 +71,16 @@ def setup():
         text = get_text_from_pdf(file = f)
         text_2_vec(text=text, path=f, coll_name=coll_name)
 
+query_enhancement_prompt = """
+Rewrite this query into a semantically rich search prompt that includes 
+synonyms, relevant phrases, and domain-specific terminology, but keep it short:
+
+query: {query}
+"""
+
+
+
+
 
 PROMPT_TEMPLATE = """
 Answer the question based only on the following context:
@@ -92,10 +102,20 @@ def main():
     query_text = args.query_text
     query_rag(query_text)
 
+def enhance_query(query):
+    prompt = PROMPT_TEMPLATE.format( query=query)
+    # print(prompt)
+
+    init_message = [{'role': 'user', 'content': prompt}]
+
+    enhanced_query = chat(
+        model = "deepseek-r1:1.5b",
+        messages=init_message
+    )['message']['content']
+    return enhanced_query
 
 def query_rag(query_text: str):
     
-
     query_embedding = ollama.embeddings(model="nomic-embed-text", prompt=query_text).embedding
 
     search_result = search(coll_name="RAG-Project", query_embedding=query_embedding)
