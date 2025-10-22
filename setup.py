@@ -81,7 +81,7 @@ def setup():
         text = get_text_from_pdf(file = f)
         text_2_vec(text=text, path=f, coll_name=coll_name)
 
-query_enhancement_prompt = """
+ENHANCEMENT_TEMPLATE = """
 Rewrite this query into a semantically rich search prompt that includes 
 synonyms, relevant phrases, and domain-specific terminology, but keep it short:
 
@@ -113,7 +113,7 @@ def main():
     query_rag(query_text)
 
 def enhance_query(query):
-    prompt = query_enhancement_prompt.format( query)
+    prompt = ENHANCEMENT_TEMPLATE.format( query)
     # print(prompt)
 
     init_message = [{'role': 'user', 'content': prompt}]
