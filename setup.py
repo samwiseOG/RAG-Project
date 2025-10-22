@@ -113,7 +113,7 @@ def main():
     query_rag(query_text)
 
 def enhance_query(query_text):
-    prompt = ENHANCEMENT_TEMPLATE.format(query_text)
+    prompt = ENHANCEMENT_TEMPLATE.format(query = query_text)
     # print(prompt)
 
     init_message = [{'role': 'user', 'content': prompt}]
