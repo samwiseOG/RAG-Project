@@ -12,7 +12,7 @@ sys.path.insert(0, str(Path(__file__).parent.parent))
 from llm.prompts import enhance_query
 from server.agent import query_rag
 from file_util import get_text_from_pdf
-from qdrant.util import text_2_vec
+from vdb.util import text_2_vec
 
 from werkzeug.utils import secure_filename
 app = Flask(__name__)

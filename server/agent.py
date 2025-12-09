@@ -2,7 +2,7 @@
 
 from llm.access import llm_chat, llm_embedding
 from llm.prompts import search_prompt
-from qdrant.access import search
+from vdb.access import search
 
 
 def query_rag(query_text: str):
