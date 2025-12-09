@@ -8,8 +8,6 @@ import docx
 import pdfplumber
 import pptx
 
-
-
 # 1. The Strategy Interface
 class TextExtractor(ABC):
     """
