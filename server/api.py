@@ -1,8 +1,19 @@
 from flask import Flask, request
 import ollama
 import requests 
-from setup import *
+import sys
 import os
+from pathlib import Path
+
+
+
+# Add parent directory to path for imports
+sys.path.insert(0, str(Path(__file__).parent.parent))
+from llm.prompts import enhance_query
+from server.agent import query_rag
+from file_util import get_text_from_pdf
+from qdrant.util import text_2_vec
+
 from werkzeug.utils import secure_filename
 app = Flask(__name__)
 
@@ -33,7 +44,6 @@ def load_file():
 
 @app.route("/ollama", methods=['GET'])
 def get_response():
-    # return str(ollama.embeddings(model='nomic-embed-text', prompt='The sky is blue because of rayleigh scattering'))
     query = request.args.get('query')
     enhanced_query = enhance_query(query)
     #print(enhanced_query)
@@ -44,4 +54,4 @@ def get_response():
 
 
 if __name__ == "__main__":
-    app.run(host = "0.0.0.0", port=5000)
+    app.run(host = "0.0.0.0", port=5001)
