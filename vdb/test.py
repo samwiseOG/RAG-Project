@@ -46,3 +46,18 @@ def cross_fold(text: str, params_list: list, path: str):
                 )
         
         print(f"Tested params: chunk_size={params['chunk_size']}, overlap={params['overlap']}, chunks: {len(chunks)}")
+
+
+if __name__ == "__main__":
+    sample_file = '' # TODO: find dataset
+    
+    test_params = [
+        {'chunk_size': 50, 'overlap': 1},
+        {'chunk_size': 100, 'overlap': 1},
+        {'chunk_size': 150, 'overlap': 1},        
+        {'chunk_size': 50, 'overlap': 2},
+        {'chunk_size': 100, 'overlap': 2},
+        {'chunk_size': 150, 'overlap': 2},
+    ]
+    
+    cross_fold(sample_file, test_params, path="sample.txt")
