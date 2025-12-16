@@ -4,8 +4,32 @@ from typing import List
 from llm.access import llm_embedding
 from .access import *
 
-def chunk_text(text: str, chunk_size: int = 2000, overlap: int = 50) -> List[str]:
-    """Chunks a long text into smaller segments based on token count."""
+import re
+from typing import List
+
+from llm.access import llm_embedding
+from .access import *
+
+def chunk_text(text: str, chunk_size: int = 2000, overlap: int = 1) -> List[str]:
+    """
+    Chunks a long text into smaller segments based on character count (approximating tokens).
+    
+    This function splits the input text into sentences, then groups them into chunks
+    where each chunk's total character length does not exceed chunk_size. Overlapping
+    sentences can be included between chunks to maintain context.
+    
+    Args:
+        text: The input text to be chunked.
+        chunk_size: Maximum character count per chunk (default: 2000).
+        overlap: Number of overlapping sentences between chunks (default: 50).
+    
+    Returns:
+        List[str]: A list of text chunks, each as a string.
+    
+    Expected output: A list of strings, where each string is a chunk of the original text.
+    For example, if the input text is a long document, the output might be:
+    ["This is the first chunk of text.", "This is the second chunk with some overlap."]
+    """
     print("Begin chunking the page")
     print(f"Total length of the page: {len(text)}")
 
@@ -37,14 +61,25 @@ def chunk_text(text: str, chunk_size: int = 2000, overlap: int = 50) -> List[str
 
 def text_2_vec(text: str, path: str, coll_name: str):
     """
-    Convert text to vector embeddings with configurable chunking parameters.
+    Convert text to vector embeddings and store them in the vector database.
+    
+    This function takes input text, chunks it into smaller segments, generates
+    vector embeddings for each chunk using an LLM, and stores the embeddings
+    along with metadata in the specified vector database collection.
     
     Args:
-        text: Source text to process
-        path: File path for reference
-        coll_name: Collection name in the vector database
-        chunk_size: Size of each chunk in tokens (default: 500)
-        overlap: Number of overlapping tokens between chunks (default: 50)
+        text: The source text to process and embed.
+        path: File path for reference (used as metadata).
+        coll_name: Name of the collection in the vector database.
+    
+    Returns:
+        None: This function does not return a value. It performs side effects
+        by storing vector embeddings in the database.
+    
+    Expected output: No direct output. The function modifies the vector database
+    by adding points (embeddings) for each text chunk. Each point includes:
+    - The embedding vector
+    - Metadata: path, chunk number (cNum), and the chunk content
     """
     chunks = chunk_text(text)
     for ind, c in enumerate(chunks):
