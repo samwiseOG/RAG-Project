@@ -1,14 +1,15 @@
 from vdb.util import chunk_text
-from vdb.access import client, upsert_point
-from qdrant_client.models import Filter, FieldCondition, MatchValue, VectorParams, Distance
+from vdb.access import client
+from qdrant_client.models import Filter, FieldCondition, MatchValue, VectorParams, Distance, PointStruct
 from llm.access import llm_embedding
+import uuid
 
 def cross_fold(text: str, params_list: list, path: str):
     """
     Cross validate different parameter effects on chunking method.
     
-    For each set of parameters in params_list, chunk the text, replace the previous
-    chunks in the collection 'RAG_Project_Test', and store the new chunks.
+    For each set of parameters in params_list, chunk the text, and store the new chunks
+    in the collection 'RAG_Project_Test' with chunk_size and overlap in payload.
     
     Args:
         text: The input text to chunk.
@@ -25,19 +26,6 @@ def cross_fold(text: str, params_list: list, path: str):
         )
     
     for params in params_list:
-        # Clear previous chunks for this path
-        client.delete(
-            collection_name=coll_name,
-            points_selector=Filter(
-                must=[
-                    FieldCondition(
-                        key="path",
-                        match=MatchValue(value=path)
-                    )
-                ]
-            )
-        )
-        
         # Chunk with new params
         chunks = chunk_text(text, chunk_size=params['chunk_size'], overlap=params['overlap'])
         
@@ -45,6 +33,16 @@ def cross_fold(text: str, params_list: list, path: str):
         for ind, c in enumerate(chunks):
             if c and len(c.strip()) > 0:
                 embedding = llm_embedding(c)
-                upsert_point(coll_name=coll_name, path=path, cNum=ind, embedding_list=embedding, content=c)
+                client.upsert(
+                    collection_name=coll_name,
+                    wait=True,
+                    points=[
+                        PointStruct(
+                            id=str(uuid.uuid4()), 
+                            vector=embedding, 
+                            payload={"path": path, "content": c, "chunk_number": ind, "chunk_size": params['chunk_size'], "overlap": params['overlap']}
+                        )
+                    ],
+                )
         
         print(f"Tested params: chunk_size={params['chunk_size']}, overlap={params['overlap']}, chunks: {len(chunks)}")
