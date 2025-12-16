@@ -35,7 +35,7 @@ def chunk_text(text: str, chunk_size: int = 2000, overlap: int = 50) -> List[str
     print(f"Total number of chunks: {len(chunks)}")
     return chunks
 
-def text_2_vec(text: str, path: str, coll_name: str, chunk_size: int = 500, overlap: int = 50):
+def text_2_vec(text: str, path: str, coll_name: str):
     """
     Convert text to vector embeddings with configurable chunking parameters.
     
@@ -46,7 +46,7 @@ def text_2_vec(text: str, path: str, coll_name: str, chunk_size: int = 500, over
         chunk_size: Size of each chunk in tokens (default: 500)
         overlap: Number of overlapping tokens between chunks (default: 50)
     """
-    chunks = chunk_text(text, chunk_size=chunk_size, overlap=overlap)
+    chunks = chunk_text(text)
     for ind, c in enumerate(chunks):
         if c and len(c.strip()) > 0:  # Only process non-empty chunks
             embedding = llm_embedding(c)

@@ -43,9 +43,9 @@ def load_file():
 @app.route("/ollama", methods=['GET'])
 def get_response():
     query = request.args.get('query')
-    enhanced_query = enhance_query(query)
+    # enhanced_query = enhance_query(query)
     #print(enhanced_query)
-    response = query_rag(query_text=enhanced_query)
+    response = query_rag(query_text=query)
     return response, 200
 
 

@@ -25,9 +25,7 @@ Answer the question based on the above context: {question}
 def enhance_query(query_text):
     prompt = ENHANCEMENT_TEMPLATE.format(query = query_text)
     # print(prompt)
-    enhanced_query = llm_chat(prompt=prompt)[0] # Not sure about messages here
-    print(enhanced_query)
-    return enhanced_query
+    return prompt
 
 
 def search_prompt(context: str, question: str):
