@@ -1,21 +1,20 @@
 from flask import Flask, request
-import ollama
-import requests 
 import sys
 import os
 from pathlib import Path
 
+
 # Add parent directory to path for imports
 sys.path.insert(0, str(Path(__file__).parent.parent))
-from llm.prompts import enhance_query
+from vdb.access import add_to_qdrant
+
 from server.agent import query_rag
-from file_util import get_text_from_pdf
-from vdb.util import text_2_vec
+from vdb.util import load_documents, split_documents
 
 from werkzeug.utils import secure_filename
 app = Flask(__name__)
 
-app.config['UPLOAD_FOLDER'] = "/home/sam/Documents/Projects/RAG/RAG-Project/app/tmp"
+app.config['UPLOAD_FOLDER'] = os.path.join(os.getcwd(), 'data')
 
 @app.route("/embed", methods=['POST'])
 def load_file():
@@ -29,13 +28,12 @@ def load_file():
     else: 
         return 'No file in the request',400
     try:
-        text = get_text_from_pdf(path_to_file)
+        # text = get_text_from_pdf(path_to_file)
+        documents = load_documents()
+        chunks = split_documents(documents)
+        add_to_qdrant(chunks, coll_name="my_collection")
     except Exception as e:
         return 'error during text extraction' + {str(e)}, 500
-    try:
-        text_2_vec(text, path=path_to_file, coll_name="RAG-Project")
-    except Exception as e:
-        return 'error during vectorization' + {str(e)}, 500
     return 'file uploaded', 201
 
 
