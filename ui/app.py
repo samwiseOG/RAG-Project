@@ -36,6 +36,23 @@ with st.sidebar:
     st.divider()
     st.header("📁 File Management")
     
+    # Get available collections
+    try:
+        collections_response = requests.get(f"{SERVER_BASE_URL}/collections", timeout=5)
+        if collections_response.status_code == 200:
+            collections = collections_response.json()
+        else:
+            collections = []
+    except:
+        collections = []
+    
+    # Collection selection dropdown
+    selected_collection = st.selectbox(
+        "Select collection to upload into",
+        options=collections if collections else ["default"],
+        index=0
+    )
+    
     uploaded_file = st.file_uploader(
         "Upload a PDF file to add to knowledge base",
         type=["pdf"]
@@ -47,8 +64,9 @@ with st.sidebar:
                 try:
                     files = {"document": (uploaded_file.name, uploaded_file, "application/pdf")}
                     response = requests.post(
-                        f"{SERVER_BASE_URL}/embed",
+                        f"{SERVER_BASE_URL}/upload",
                         files=files,
+                        params={"collection": selected_collection},
                         timeout=60
                     )
                     

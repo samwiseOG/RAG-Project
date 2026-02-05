@@ -179,3 +179,14 @@ def search(coll_name:str, query_embedding: list, file_path: str= None):
         with_payload=True,
         limit=10
     ).points
+
+def get_all_collections() -> list[str]:
+    """Retrieve all collection names from Qdrant."""
+    try:
+        collections = client.get_collections()
+        collection_names = [collection.name for collection in collections.collections]
+        logger.info(f"Found {len(collection_names)} collections: {collection_names}")
+        return collection_names
+    except Exception as e:
+        logger.error(f"❌ Failed to retrieve collections: {e}")
+        return []
