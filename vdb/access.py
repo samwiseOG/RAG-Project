@@ -3,7 +3,7 @@ from langchain_qdrant import QdrantVectorStore
 from qdrant_client import QdrantClient
 from qdrant_client.models import PointStruct, Filter, FieldCondition, MatchValue
 from langchain_core.documents import Document
-from llm.access import get_embedding_function
+from llm.model import embedder
 
 
 # client = QdrantClient(url="http://localhost:6333")
@@ -73,7 +73,7 @@ def add_to_qdrant(chunks: list[Document], coll_name: str):
     db = QdrantVectorStore(
         client=client,
         collection_name=coll_name,
-        embedding=get_embedding_function()
+        embedding=embedder()
     )
 
     # Calculate Page IDs.

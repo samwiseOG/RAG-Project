@@ -1,13 +1,13 @@
 
 
-from llm.access import llm_chat, llm_embedding
+from llm.model import embedder, llm_class
 from llm.prompts import search_prompt
 from vdb.access import search
 
 
 def query_rag(query_text: str):
     
-    query_embedding = llm_embedding(query_text)
+    query_embedding = embedder()(query_text)
 
     search_result = search(coll_name="RAG-Project", query_embedding=query_embedding)
 
@@ -16,7 +16,7 @@ def query_rag(query_text: str):
     prompt = search_prompt(context=context_text, question=query_text)
 
 
-    response_text = llm_chat(
+    response_text = llm_class.generate(
         prompt=prompt,
     )[0]
 
