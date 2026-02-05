@@ -1,14 +1,27 @@
 import re
+import os
 from typing import List
 
 from llm.access import llm_embedding
 from .access import *
+from langchain_community.document_loaders import PyPDFDirectoryLoader
+from langchain_text_splitters import RecursiveCharacterTextSplitter
+from langchain_core.documents import Document
 
-import re
-from typing import List
+DATA_PATH = os.path.join(os.getcwd(), 'data')
 
-from llm.access import llm_embedding
-from .access import *
+def load_documents():
+    document_loader = PyPDFDirectoryLoader(DATA_PATH)
+    return document_loader.load()
+
+def split_documents(documents: list[Document]):
+    text_splitter = RecursiveCharacterTextSplitter(
+        chunk_size=800,
+        chunk_overlap=80,
+        length_function=len,
+        is_separator_regex=False,
+    )
+    return text_splitter.split_documents(documents)
 
 def chunk_text(text: str, chunk_size: int = 2000, overlap: int = 1) -> List[str]:
     """
