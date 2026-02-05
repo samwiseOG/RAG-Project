@@ -1,6 +1,7 @@
 import ollama
+from langchain_core.embeddings import Embeddings
 
-class embedder:
+class embedder(Embeddings):
     def __init__(
         self,
         model = "nomic-embed-text"
@@ -9,8 +10,11 @@ class embedder:
         ollama.pull(model, stream=True)
         self.model = model
 
-    def create_embedding(self,_text: str):
-        return ollama.embeddings(model=self.model, prompt=_text).embedding
+    def embed_documents(self, texts: list[str]) -> list[list[float]]:
+        return [ollama.embeddings(model=self.model, prompt=text)['embedding'] for text in texts]
+    
+    def embed_query(self, text: str) -> list[float]:
+        return ollama.embeddings(model=self.model, prompt=text)['embedding']
 
 class llm_class:
     def __init__(

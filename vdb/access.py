@@ -1,23 +1,46 @@
 import uuid
+import os
+import logging
+from dotenv import load_dotenv
 from langchain_qdrant import QdrantVectorStore
 from qdrant_client import QdrantClient
 from qdrant_client.models import PointStruct, Filter, FieldCondition, MatchValue
 from langchain_core.documents import Document
 from llm.model import embedder
-
-
-# client = QdrantClient(url="http://localhost:6333")
-client = QdrantClient(":memory:")
-
+from langchain_core.embeddings import Embeddings
 from qdrant_client.models import Distance, VectorParams
 
-def create_collection(path:str):
+# Configure logging
+logging.basicConfig(
+    level=logging.INFO,
+    format='%(asctime)s - %(name)s - %(levelname)s - %(message)s'
+)
+logger = logging.getLogger(__name__)
+
+# Load environment variables
+load_dotenv()
+
+QDRANT_URL = os.getenv('QDRANT_URL', 'http://localhost:6333')
+VECTOR_SIZE = int(os.getenv('VECTOR_SIZE', '768'))
+DISTANCE_METRIC = os.getenv('DISTANCE_METRIC', 'DOT')
+
+# Initialize client using QDRANT_URL from .env
+client = QdrantClient(url=QDRANT_URL)
+
+def create_collection(co):
     folder_name = path.split('/')[-2]
     if not client.collection_exists(folder_name):
-        client.create_collection(
-        collection_name=folder_name,
-        vectors_config=VectorParams(size=768, distance=Distance.DOT),
-    )
+        try:
+            client.create_collection(
+                collection_name=folder_name,
+                vectors_config=VectorParams(size=VECTOR_SIZE, distance=Distance[DISTANCE_METRIC]),
+            )
+            logger.info(f"✅ Created collection '{folder_name}' with size={VECTOR_SIZE}, distance={DISTANCE_METRIC}")
+        except Exception as e:
+            logger.error(f"❌ Failed to create collection '{folder_name}': {e}")
+            raise
+    else:
+        logger.info(f"ℹ️ Collection '{folder_name}' already exists")
     return folder_name
 
 
@@ -32,13 +55,6 @@ def upsert_point(coll_name, path, cNum, embedding_list, content):
     ],
 )
     
-def add_documents(coll_name:str, documents: list):
-    vector_store = QdrantVectorStore(
-        client=client,
-        collection_name=coll_name,
-        embedding=get_embedding_function()
-    )
-    vector_store.add_documents(documents)
 
 def calculate_chunk_ids(chunks):
 
@@ -68,21 +84,66 @@ def calculate_chunk_ids(chunks):
 
     return chunks
 
+def get_distance_strategy(coll_name: str) -> str:
+    """Retrieve the distance strategy from an existing Qdrant collection."""
+    collection_info = client.get_collection(coll_name)
+    distance = collection_info.config.params.vectors.distance
+    logger.info(f"Distance strategy for collection '{coll_name}': {distance}")
+    
+    # Map Qdrant Distance enum to LangChain strategy string
+    distance_map = {
+        "Cosine": "COSINE",
+        "Euclid": "EUCLIDEAN",
+        "Dot": "DOT",
+        "Manhattan": "MANHATTAN"
+    }
+    
+    return distance_map.get(str(distance))
+
 def add_to_qdrant(chunks: list[Document], coll_name: str):
     # Load the existing database.
+    embedding_instance = embedder()
+    
+    # Get distance strategy from collection
+
+
+    if not client.collection_exists(coll_name):
+        try:
+            client.create_collection(
+                collection_name=coll_name,
+                vectors_config=VectorParams(size=VECTOR_SIZE, distance=Distance[DISTANCE_METRIC]),
+            )
+            logger.info(f"✅ Created collection '{coll_name}' with size={VECTOR_SIZE}, distance={DISTANCE_METRIC}")
+        except Exception as e:
+            logger.error(f"❌ Failed to create collection '{coll_name}': {e}")
+            raise
+
+    distance_strategy = get_distance_strategy(coll_name)
+    logger.info(f"Using distance strategy: {distance_strategy}")
+    
+    
     db = QdrantVectorStore(
         client=client,
         collection_name=coll_name,
-        embedding=embedder()
+        embedding=embedding_instance,
     )
 
     # Calculate Page IDs.
     chunks_with_ids = calculate_chunk_ids(chunks)
 
     # Add or Update the documents.
-    existing_items = db.get(include=[])  # IDs are always included by default
-    existing_ids = set(existing_items["ids"])
-    print(f"Number of existing documents in DB: {len(existing_ids)}")
+    try:
+        collection_info = client.get_collection(coll_name)
+        existing_ids = set()
+        # Get all point IDs from the collection
+        if collection_info.points_count > 0:
+            points = client.scroll(collection_name=coll_name, limit=collection_info.points_count)[0]
+            existing_ids = set(point.id for point in points)
+    except Exception as e:
+        logger.warning(f"Could not retrieve existing items: {e}. Proceeding with empty set.")
+        existing_ids = set()
+    
+    logger.info(f"Number of existing documents in DB: {len(existing_ids)}")
 
     # Only add documents that don't exist in the DB.
     new_chunks = []
@@ -91,13 +152,14 @@ def add_to_qdrant(chunks: list[Document], coll_name: str):
             new_chunks.append(chunk)
 
     if len(new_chunks):
-        print(f"👉 Adding new documents: {len(new_chunks)}")
-        new_chunk_ids = [chunk.metadata["id"] for chunk in new_chunks]
+        logger.info(f"👉 Adding new documents: {len(new_chunks)}")
+        # Generate UUID for each chunk and store string ID in metadata
+        new_chunk_ids = [str(uuid.uuid4()) for _ in new_chunks]
+        for chunk, chunk_id in zip(new_chunks, new_chunk_ids):
+            chunk.metadata["chunk_id"] = chunk.metadata["id"]  # Store original ID
         db.add_documents(new_chunks, ids=new_chunk_ids)
-        db.persist()
     else:
-        print("✅ No new documents to add")
-
+        logger.info("✅ No new documents to add")
     
 def search(coll_name:str, query_embedding: list, file_path: str= None):
     f = None

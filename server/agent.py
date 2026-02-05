@@ -7,7 +7,7 @@ from vdb.access import search
 
 def query_rag(query_text: str):
     
-    query_embedding = embedder()(query_text)
+    query_embedding = embedder().create_embedding(query_text)
 
     search_result = search(coll_name="RAG-Project", query_embedding=query_embedding)
 
