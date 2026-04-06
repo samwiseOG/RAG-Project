@@ -11,14 +11,41 @@ client = QdrantClient(":memory:")
 
 from qdrant_client.models import Distance, VectorParams
 
+AVAILABLE_DISTANCES = {
+    "DOT": Distance.DOT,
+    "COSINE": Distance.COSINE,
+    "EUCLID": Distance.EUCLID,
+}
+
+def get_distance_from_string(distance_name: str) -> Distance:
+    """Convert distance name string to Distance enum"""
+    return AVAILABLE_DISTANCES.get(distance_name.upper(), Distance.DOT)
+
 def create_collection(path:str):
     folder_name = path.split('/')[-2]
     if not client.collection_exists(folder_name):
         client.create_collection(
         collection_name=folder_name,
-        vectors_config=VectorParams(size=768, distance=Distance.DOT),
+        vectors_config=VectorParams(size=768, distance=Distance.COSINE),
     )
     return folder_name
+
+
+def create_collection_with_name(collection_name: str, distance: str = "COSINE"):
+    """Create a new collection with a custom name and distance metric
+    
+    Args:
+        collection_name: Name of the collection
+        distance: Distance metric - "DOT", "COSINE", or "EUCLID" (default: "COSINE")
+    """
+    if not client.collection_exists(collection_name):
+        distance_enum = get_distance_from_string(distance)
+        client.create_collection(
+            collection_name=collection_name,
+            vectors_config=VectorParams(size=768, distance=distance_enum),
+        )
+        return True
+    return False
 
 
 def upsert_point(coll_name, path, cNum, embedding_list, content):
@@ -117,3 +144,12 @@ def search(coll_name:str, query_embedding: list, file_path: str= None):
         with_payload=True,
         limit=10
     ).points
+
+def get_collections():
+    """Get list of all available collections"""
+    try:
+        collections_info = client.get_collections()
+        return [collection.name for collection in collections_info.collections]
+    except Exception as e:
+        print(f"Error getting collections: {str(e)}")
+        return []
