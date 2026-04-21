@@ -26,7 +26,7 @@ app.config['UPLOAD_FOLDER'] = os.path.join(os.getcwd(), 'data')
 
 app = Flask(__name__)
 UPLOAD_FOLDER = os.path.join(os.getcwd(), "data")
-DEFAULT_COLLECTION_NAME = os.getenv('DEFAULT_COLLECTION_NAME', 'my_collection')
+DEFAULT_COLLECTION_NAME = os.getenv('DEFAULT_COLLECTION_NAME', 'RAG-Project-Langchain')
 print(UPLOAD_FOLDER)
 os.makedirs(UPLOAD_FOLDER, exist_ok=True)
 ALLOWED_EXTENSIONS = {"pdf"}
@@ -115,6 +115,32 @@ def get_response():
     return response, 200
 
 
+
+@app.route("/rag", methods=['GET'])
+def get_rag_response():
+    """Query the RAG agent.
+    
+    Query params:
+        - query: The question to ask
+        - collection_name: (optional) The collection to search in
+    """
+    try:
+        query = request.args.get('query')
+        if not query:
+            return jsonify({"error": "Missing 'query' parameter"}), 400
+        
+        coll_name = request.args.get('collection_name', DEFAULT_COLLECTION_NAME)
+        
+        # Use langchain agent
+        from llm.agents import rag_agent
+        response = rag_agent(query, coll_name=coll_name)
+        
+        return jsonify({"response": response}), 200
+    except Exception as e:
+        import traceback
+        error_detail = traceback.format_exc()
+        print(f"Error in /rag endpoint: {error_detail}")
+        return jsonify({"error": str(e), "details": error_detail}), 500
 
 
 if __name__ == "__main__":

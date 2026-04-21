@@ -21,7 +21,7 @@ st.markdown("*Ask questions and get intelligent responses from your knowledge ba
 if "messages" not in st.session_state:
     st.session_state.messages = []
 
-# Sidebar for configuration and file upload
+# Sbar for configuration and file upload
 with st.sidebar:
     st.header("⚙️ Configuration")
     
@@ -106,8 +106,8 @@ if prompt := st.chat_input("Ask a question..."):
         with st.spinner("Thinking..."):
             try:
                 response = requests.get(
-                    f"{SERVER_BASE_URL}/ollama",
-                    params={"query": prompt},
+                    f"{SERVER_BASE_URL}/rag",
+                    params={"query": prompt, "collection_name": selected_collection},
                     timeout=120
                 )
                 

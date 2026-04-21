@@ -180,6 +180,23 @@ def search(coll_name:str, query_embedding: list, file_path: str= None):
         limit=10
     ).points
 
+def search_langchain(query: str, k: int = 10, coll_name: str = None):
+    if not coll_name or not client.collection_exists(coll_name) :
+        # Use the first collection
+        collections = client.get_collections()
+        if not collections.collections:
+            logger.error("❌ No collections found in Qdrant")
+            return []
+        coll_name = collections.collections[0].name
+        logger.warning(f"⚠️ Collection name not provided or does not exist. Defaulting")
+    
+    db = QdrantVectorStore(
+        client=client,
+        collection_name=coll_name,
+        embedding=embedder(),
+    )
+    return db.similarity_search(query, k=k)
+
 def get_all_collections() -> list[str]:
     """Retrieve all collection names from Qdrant."""
     try:
