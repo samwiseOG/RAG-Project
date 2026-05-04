@@ -1,0 +1,46 @@
+version: '3.8'
+
+# OPTIONAL: This docker-compose file provides an alternative to the single-container approach
+# For the single-container Dockerfile, use: docker build -t rag-app . && docker run ...
+# This file is useful for development/debugging where you want to manage volumes easily
+
+services:
+  rag-app:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    container_name: rag-app
+    ports:
+      - "5001:5001"      # Flask API
+      - "8501:8501"      # Streamlit UI
+      - "6333:6333"      # Qdrant Database
+      - "11434:11434"    # Ollama (optional external access)
+    volumes:
+      - qdrant_data:/qdrant_storage
+      - app_data:/app/data
+      - ollama_models:/home/appuser/.ollama
+    environment:
+      - QDRANT_URL=http://localhost:6333
+      - DEFAULT_COLLECTION_NAME=${DEFAULT_COLLECTION_NAME:-RAG-Project-Langchain}
+      - VECTOR_SIZE=${VECTOR_SIZE:-768}
+      - DISTANCE_METRIC=${DISTANCE_METRIC:-DOT}
+      - OLLAMA_HOST=0.0.0.0:11434
+      - EMBEDDING_MODEL=${EMBEDDING_MODEL:-nomic-embed-text}
+      - LLM_MODEL=${LLM_MODEL:-deepseek-r1:1.5b}
+      - PYTHONUNBUFFERED=1
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:11434/api/tags"]
+      interval: 10s
+      timeout: 5s
+      retries: 3
+      start_period: 45s
+    restart: unless-stopped
+    env_file: .env
+
+volumes:
+  qdrant_data:
+    driver: local
+  app_data:
+    driver: local
+  ollama_models:
+    driver: local

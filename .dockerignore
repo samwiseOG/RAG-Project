@@ -1,0 +1,70 @@
+# Version control
+.git
+.gitignore
+.gitattributes
+
+# IDE and Editor
+.vscode
+.idea
+*.swp
+*.swo
+*~
+.DS_Store
+.venv
+venv/
+env/
+
+# Python
+__pycache__
+*.pyc
+*.pyo
+*.pyd
+.Python
+*.egg-info/
+dist/
+build/
+*.egg
+.pytest_cache/
+.coverage
+htmlcov/
+
+# Jupyter Notebooks
+.ipynb_checkpoints
+*.ipynb
+
+# Testing
+tests/
+test_*.py
+*_test.py
+
+# Documentation
+docs/
+*.md
+LICENSE
+
+# Build artifacts
+.github/
+.gitlab-ci.yml
+.travis.yml
+
+# Archives and backups
+*.zip
+*.tar.gz
+*.rar
+
+# Application specific
+archive/
+cache/
+*.log
+.env
+.env.local
+.env.*.local
+
+# Database (except for schema/migrations if applicable)
+*.db
+*.sqlite
+
+# Large files
+*.psd
+*.zip
+node_modules/
