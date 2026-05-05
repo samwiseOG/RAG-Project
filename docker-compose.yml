@@ -1,11 +1,53 @@
 version: '3.8'
 
-# OPTIONAL: This docker-compose file provides an alternative to the single-container approach
-# For the single-container Dockerfile, use: docker build -t rag-app . && docker run ...
-# This file is useful for development/debugging where you want to manage volumes easily
+# RECOMMENDED: Docker Compose setup for RAG Application
+# This approach is simpler, more reliable, and easier to maintain than single-container
+# Usage: docker-compose up -d
 
 services:
-  rag-app:
+  # Ollama LLM and Embedding Models
+  # Official image from ollama/ollama
+  ollama:
+    image: ollama/ollama:latest
+    container_name: rag-ollama
+    ports:
+      - "11434:11434"
+    volumes:
+      - ollama_models:/root/.ollama
+    environment:
+      - OLLAMA_HOST=0.0.0.0:11434
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:11434/api/tags"]
+      interval: 10s
+      timeout: 5s
+      retries: 3
+      start_period: 30s
+    restart: unless-stopped
+    networks:
+      - rag-network
+
+  # Qdrant Vector Database
+  # Official image from qdrant/qdrant
+  qdrant:
+    image: qdrant/qdrant:latest
+    container_name: rag-qdrant
+    ports:
+      - "6333:6333"
+      - "6334:6334"
+    volumes:
+      - qdrant_storage:/qdrant/storage
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:6333/health"]
+      interval: 10s
+      timeout: 5s
+      retries: 3
+      start_period: 10s
+    restart: unless-stopped
+    networks:
+      - rag-network
+
+  # Python Application (Flask API + Streamlit UI)
+  app:
     build:
       context: .
       dockerfile: Dockerfile
@@ -13,34 +55,41 @@ services:
     ports:
       - "5001:5001"      # Flask API
       - "8501:8501"      # Streamlit UI
-      - "6333:6333"      # Qdrant Database
-      - "11434:11434"    # Ollama (optional external access)
     volumes:
-      - qdrant_data:/qdrant_storage
       - app_data:/app/data
-      - ollama_models:/home/appuser/.ollama
+      - ./llm:/app/llm
+      - ./vdb:/app/vdb
+      - ./server:/app/server
+      - ./ui:/app/ui
     environment:
-      - QDRANT_URL=http://localhost:6333
+      - QDRANT_URL=http://qdrant:6333
       - DEFAULT_COLLECTION_NAME=${DEFAULT_COLLECTION_NAME:-RAG-Project-Langchain}
       - VECTOR_SIZE=${VECTOR_SIZE:-768}
       - DISTANCE_METRIC=${DISTANCE_METRIC:-DOT}
-      - OLLAMA_HOST=0.0.0.0:11434
-      - EMBEDDING_MODEL=${EMBEDDING_MODEL:-nomic-embed-text}
-      - LLM_MODEL=${LLM_MODEL:-deepseek-r1:1.5b}
+      - FLASK_APP=server/api.py
+      - STREAMLIT_SERVER_HEADLESS=true
+      - STREAMLIT_SERVER_PORT=8501
+      - STREAMLIT_SERVER_ADDRESS=0.0.0.0
       - PYTHONUNBUFFERED=1
-    healthcheck:
-      test: ["CMD", "curl", "-f", "http://localhost:11434/api/tags"]
-      interval: 10s
-      timeout: 5s
-      retries: 3
-      start_period: 45s
+    depends_on:
+      ollama:
+        condition: service_healthy
+      qdrant:
+        condition: service_healthy
     restart: unless-stopped
-    env_file: .env
+    networks:
+      - rag-network
+    env_file:
+      - .env
+
+networks:
+  rag-network:
+    driver: bridge
 
 volumes:
-  qdrant_data:
+  ollama_models:
+    driver: local
+  qdrant_storage:
     driver: local
   app_data:
-    driver: local
-  ollama_models:
     driver: local

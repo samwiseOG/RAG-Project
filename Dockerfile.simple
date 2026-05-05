@@ -1,0 +1,48 @@
+#!/bin/bash
+
+# Simplified Dockerfile - Single container approach
+# Note: This uses docker-compose for better separation of concerns
+
+FROM python:3.11-slim
+
+WORKDIR /app
+
+# Install system dependencies
+RUN apt-get update && apt-get install -y \
+    curl \
+    wget \
+    git \
+    build-essential \
+    ca-certificates \
+    && rm -rf /var/lib/apt/lists/*
+
+# Copy and install Python dependencies
+COPY requirements.txt .
+RUN pip install --no-cache-dir -r requirements.txt
+
+# Copy application code
+COPY --chown=1000:1000 . /app/
+
+# Create necessary directories
+RUN mkdir -p /app/data && \
+    useradd -m -u 1000 appuser && \
+    chown -R appuser:appuser /app
+
+# Set environment variables
+ENV PYTHONUNBUFFERED=1
+ENV QDRANT_URL=http://qdrant:6333
+ENV OLLAMA_HOST=http://ollama:11434
+ENV DEFAULT_COLLECTION_NAME=RAG-Project-Langchain
+ENV VECTOR_SIZE=768
+ENV DISTANCE_METRIC=DOT
+
+USER appuser
+
+# Expose Flask and Streamlit ports
+EXPOSE 5001 8501
+
+# Copy startup script
+COPY --chown=appuser:appuser entrypoint-python-only.sh /app/
+RUN chmod +x /app/entrypoint-python-only.sh
+
+ENTRYPOINT ["/app/entrypoint-python-only.sh"]
