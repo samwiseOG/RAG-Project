@@ -1,31 +1,8 @@
-version: '3.8'
-
 # RECOMMENDED: Docker Compose setup for RAG Application
 # This approach is simpler, more reliable, and easier to maintain than single-container
 # Usage: docker-compose up -d
 
 services:
-  # Ollama LLM and Embedding Models
-  # Official image from ollama/ollama
-  ollama:
-    image: ollama/ollama:latest
-    container_name: rag-ollama
-    ports:
-      - "11434:11434"
-    volumes:
-      - ollama_models:/root/.ollama
-    environment:
-      - OLLAMA_HOST=0.0.0.0:11434
-    healthcheck:
-      test: ["CMD", "curl", "-f", "http://localhost:11434/api/tags"]
-      interval: 10s
-      timeout: 5s
-      retries: 3
-      start_period: 30s
-    restart: unless-stopped
-    networks:
-      - rag-network
-
   # Qdrant Vector Database
   # Official image from qdrant/qdrant
   qdrant:
@@ -37,7 +14,7 @@ services:
     volumes:
       - qdrant_storage:/qdrant/storage
     healthcheck:
-      test: ["CMD", "curl", "-f", "http://localhost:6333/health"]
+      test: ["CMD", "bash", "-c", "echo > /dev/tcp/localhost/6333"]
       interval: 10s
       timeout: 5s
       retries: 3
@@ -63,6 +40,7 @@ services:
       - ./ui:/app/ui
     environment:
       - QDRANT_URL=http://qdrant:6333
+      - OLLAMA_URL=http://host.docker.internal:11434
       - DEFAULT_COLLECTION_NAME=${DEFAULT_COLLECTION_NAME:-RAG-Project-Langchain}
       - VECTOR_SIZE=${VECTOR_SIZE:-768}
       - DISTANCE_METRIC=${DISTANCE_METRIC:-DOT}
@@ -71,9 +49,9 @@ services:
       - STREAMLIT_SERVER_PORT=8501
       - STREAMLIT_SERVER_ADDRESS=0.0.0.0
       - PYTHONUNBUFFERED=1
+    extra_hosts:
+      - "host.docker.internal:host-gateway"
     depends_on:
-      ollama:
-        condition: service_healthy
       qdrant:
         condition: service_healthy
     restart: unless-stopped
@@ -87,8 +65,6 @@ networks:
     driver: bridge
 
 volumes:
-  ollama_models:
-    driver: local
   qdrant_storage:
     driver: local
   app_data:
