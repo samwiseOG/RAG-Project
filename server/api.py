@@ -119,23 +119,27 @@ def get_response():
 @app.route("/rag", methods=['GET'])
 def get_rag_response():
     """Query the RAG agent.
-    
+
     Query params:
         - query: The question to ask
         - collection_name: (optional) The collection to search in
+        - model: (optional) The model to use (format: 'provider:model_name' or 'model_name')
     """
     try:
         query = request.args.get('query')
         if not query:
             return jsonify({"error": "Missing 'query' parameter"}), 400
-        
+
         coll_name = request.args.get('collection_name', DEFAULT_COLLECTION_NAME)
-        
-        # Use langchain agent
+        model = request.args.get('model', 'ollama:deepseek-r1:1.5b')
+
+        # Use langchain agent with model parameter
         from llm.agents import rag_agent
-        response = rag_agent(query, coll_name=coll_name)
-        
+        response = rag_agent(query, coll_name=coll_name, model=model)
+
         return jsonify({"response": response}), 200
+    except ValueError as e:
+        return jsonify({"error": f"Invalid model selection: {str(e)}"}), 400
     except Exception as e:
         import traceback
         error_detail = traceback.format_exc()
@@ -143,5 +147,34 @@ def get_rag_response():
         return jsonify({"error": str(e), "details": error_detail}), 500
 
 
-if __name__ == "__main__":
-    app.run(host = "0.0.0.0", port=5001, debug=True)
+@app.route("/models", methods=['GET'])
+def get_available_models():
+    """Get available models and provider status.
+
+    Returns:
+        JSON with provider status and available models
+    """
+    try:
+        from llm.providers import PROVIDERS, MODEL_REGISTRY
+        from llm.config import get_config
+
+        config = get_config()
+        result = {"providers": {}}
+
+        for provider_name in PROVIDERS:
+            provider = PROVIDERS[provider_name](model_name="test")
+            available = provider.validate_credentials()
+            result["providers"][provider_name] = {
+                "available": available,
+                "models": MODEL_REGISTRY.get(provider_name, []),
+                "status": "connected" if available else (
+                    "not_configured" if provider_name != "ollama" else "offline"
+                ),
+            }
+
+        return jsonify(result), 200
+    except Exception as e:
+        import traceback
+        error_detail = traceback.format_exc()
+        print(f"Error in /models endpoint: {error_detail}")
+        return jsonify({"error": str(e), "details": error_detail}), 500
