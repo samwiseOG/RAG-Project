@@ -1,0 +1,9 @@
+Flask==3.1.2
+llm==0.28
+ollama==0.6.1
+pdfplumber==0.11.7
+python_docx==1.2.0
+python_pptx==1.0.2
+Requests==2.32.5
+vdb==2.0
+Werkzeug==3.1.5
