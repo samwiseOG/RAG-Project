@@ -31,7 +31,7 @@ RUN mkdir -p /app/data && chown -R appuser:appuser /app
 
 # Set environment variables for docker-compose networking
 ENV PYTHONUNBUFFERED=1
-ENV QDRANT_URL=http://qdrant:6333
+ENV QDRANT_URL=http://localhost:6333
 ENV DEFAULT_COLLECTION_NAME=RAG-Project-Langchain
 ENV VECTOR_SIZE=768
 ENV DISTANCE_METRIC=DOT

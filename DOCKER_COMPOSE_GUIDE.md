@@ -169,7 +169,7 @@ docker-compose exec qdrant curl http://localhost:6333/health
 ### Environment Variables (.env)
 ```bash
 # Vector database
-QDRANT_URL=http://qdrant:6333
+QDRANT_URL=http://localhost:6333
 DEFAULT_COLLECTION_NAME=RAG-Project-Langchain
 VECTOR_SIZE=768
 DISTANCE_METRIC=DOT

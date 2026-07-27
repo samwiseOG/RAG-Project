@@ -30,8 +30,8 @@ RUN mkdir -p /app/data && \
 
 # Set environment variables
 ENV PYTHONUNBUFFERED=1
-ENV QDRANT_URL=http://qdrant:6333
-ENV OLLAMA_HOST=http://ollama:11434
+ENV QDRANT_URL=http://localhost:6333
+ENV OLLAMA_HOST=http://localhost:11434
 ENV DEFAULT_COLLECTION_NAME=RAG-Project-Langchain
 ENV VECTOR_SIZE=768
 ENV DISTANCE_METRIC=DOT
