@@ -1,0 +1,264 @@
+"""
+Stock Article Scraper
+Searches the web for stock buying tip articles and extracts key content.
+
+Requirements:
+    pip install requests beautifulsoup4 googlesearch-python lxml
+"""
+
+import time
+import re
+import requests
+from bs4 import BeautifulSoup
+from googlesearch import search
+
+
+# ── Configuration ────────────────────────────────────────────────────────────
+
+HEADERS = {
+    "User-Agent": (
+        "Mozilla/5.0 (Windows NT 10.0; Win64; x64) "
+        "AppleWebKit/537.36 (KHTML, like Gecko) "
+        "Chrome/120.0.0.0 Safari/537.36"
+    )
+}
+
+# Sites known to have good free stock content (no hard paywall)
+TRUSTED_DOMAINS = [
+    "investopedia.com",
+    "fool.com",
+    "finance.yahoo.com",
+    "macrotrends.net",
+    "marketwatch.com",
+    "barrons.com",
+    "cnbc.com",
+    "reuters.com",
+    "benzinga.com",
+    "stockanalysis.com",
+]
+
+# Paragraphs shorter than this are likely nav/footer noise
+MIN_PARAGRAPH_LENGTH = 60
+
+
+# ── Search ───────────────────────────────────────────────────────────────────
+
+def build_queries(topic: str = ""):
+    """Generate search queries for stock buying tips."""
+    base = [
+        "best stocks to buy now 2025",
+        "top stock picks analysts recommend",
+        "undervalued stocks to buy today",
+        "growth stocks with strong fundamentals",
+    ]
+    if topic:
+        base.insert(0, f"{topic} stock buying tips")
+    return base
+
+
+def get_article_urls(queries: list, results_per_query: int = 5) -> list:
+    """Run Google searches and collect unique article URLs."""
+    urls = []
+    seen = set()
+
+    for query in queries:
+        print(f"\n🔍 Searching: {query}")
+        try:
+            for url in search(query, num_results=results_per_query, sleep_interval=2):
+                if url not in seen:
+                    seen.add(url)
+                    urls.append(url)
+                    print(f"   + {url}")
+        except Exception as e:
+            print(f"   ⚠️  Search error: {e}")
+        time.sleep(1)
+
+    return urls
+
+
+# ── Scraping ─────────────────────────────────────────────────────────────────
+
+def is_trusted(url: str) -> bool:
+    return any(domain in url for domain in TRUSTED_DOMAINS)
+
+
+def scrape_article(url: str, timeout: int = 10) -> dict:
+    """Fetch and parse a single article. Returns dict or None on failure."""
+    try:
+        resp = requests.get(url, headers=HEADERS, timeout=timeout)
+        resp.raise_for_status()
+    except Exception as e:
+        print(f"   ✗ Fetch failed ({e})")
+        return None
+
+    soup = BeautifulSoup(resp.text, "lxml")
+
+    # Remove clutter
+    for tag in soup(["script", "style", "nav", "footer", "aside",
+                     "header", "form", "iframe", "noscript"]):
+        tag.decompose()
+
+    # Title
+    title = (
+        soup.find("h1") or soup.find("title") or soup.find("h2")
+    )
+    title_text = title.get_text(strip=True) if title else "No title"
+
+    # Body paragraphs — try article/main first, fall back to body
+    container = (
+        soup.find("article")
+        or soup.find("main")
+        or soup.find(class_=re.compile(r"article|content|post|story", re.I))
+        or soup.body
+    )
+
+    paragraphs = []
+    if container:
+        for p in container.find_all("p"):
+            text = p.get_text(separator=" ", strip=True)
+            if len(text) >= MIN_PARAGRAPH_LENGTH:
+                paragraphs.append(text)
+
+    if not paragraphs:
+        return None
+
+    return {
+        "url": url,
+        "title": title_text,
+        "paragraphs": paragraphs,
+        "trusted": is_trusted(url),
+    }
+
+
+# ── Tip Extraction ────────────────────────────────────────────────────────────
+
+# Stock ticker pattern: 1-5 uppercase letters, optionally preceded by $ or "ticker:"
+TICKER_RE = re.compile(r"\b\$?([A-Z]{1,5})\b")
+
+# Keywords that suggest a sentence contains a tip or recommendation
+TIP_KEYWORDS = re.compile(
+    r"\b(buy|bullish|upside|target price|price target|recommend|"
+    r"strong buy|outperform|upgrade|undervalued|catalyst|growth|"
+    r"dividend|earnings beat|potential|accumulate|long-term hold)\b",
+    re.IGNORECASE,
+)
+
+# Common false-positive tickers to ignore (common English words / abbreviations)
+TICKER_BLOCKLIST = {
+    "A", "I", "IT", "IN", "IS", "AT", "BE", "BY", "DO", "GO", "IF",
+    "ME", "MY", "NO", "OF", "OR", "SO", "TO", "UP", "US", "WE",
+    "CEO", "CFO", "CTO", "SEC", "ETF", "IPO", "GDP", "USA", "USD",
+    "THE", "AND", "FOR", "ARE", "BUT", "NOT", "YOU", "ALL", "CAN",
+    "HAS", "HER", "HIS", "HOW", "ITS", "OUR", "OUT", "WHO", "WAS",
+    "FROM", "THAT", "THIS", "WITH", "WILL", "HAVE", "BEEN", "THEY",
+}
+
+
+def extract_tips(article: dict) -> list:
+    """Pull sentences containing tickers + recommendation language."""
+    tips = []
+    for para in article["paragraphs"]:
+        sentences = re.split(r"(?<=[.!?])\s+", para)
+        for sentence in sentences:
+            tickers = [
+                t for t in TICKER_RE.findall(sentence)
+                if t not in TICKER_BLOCKLIST and len(t) >= 2
+            ]
+            if tickers and TIP_KEYWORDS.search(sentence):
+                tips.append({
+                    "tickers": list(set(tickers)),
+                    "sentence": sentence.strip(),
+                    "source": article["url"],
+                    "trusted": article["trusted"],
+                })
+    return tips
+
+
+# ── Output ────────────────────────────────────────────────────────────────────
+
+def print_results(all_tips: list) -> None:
+    if not all_tips:
+        print("\n⚠️  No tips extracted.")
+        return
+
+    # Group by ticker
+    from collections import defaultdict
+    by_ticker = defaultdict(list)
+    for tip in all_tips:
+        for ticker in tip["tickers"]:
+            by_ticker[ticker].append(tip)
+
+    print("\n" + "=" * 70)
+    print("📈  STOCK TIPS SUMMARY")
+    print("=" * 70)
+
+    # Sort by mention count
+    for ticker, mentions in sorted(by_ticker.items(), key=lambda x: -len(x[1])):
+        print(f"\n  ${ticker}  ({len(mentions)} mention{'s' if len(mentions) > 1 else ''})")
+        seen_sentences = set()
+        for tip in mentions:
+            if tip["sentence"] not in seen_sentences:
+                seen_sentences.add(tip["sentence"])
+                flag = "✅" if tip["trusted"] else "⚠️ "
+                print(f"    {flag} {tip['sentence'][:200]}")
+                print(f"       Source: {tip['source'][:80]}")
+
+
+def save_to_file(all_tips: list, filename: str = "stock_tips.txt") -> None:
+    with open(filename, "w", encoding="utf-8") as f:
+        f.write("STOCK TIPS EXTRACTED FROM WEB ARTICLES\n")
+        f.write("=" * 70 + "\n\n")
+        for tip in all_tips:
+            f.write(f"Tickers : {', '.join(tip['tickers'])}\n")
+            f.write(f"Tip     : {tip['sentence']}\n")
+            f.write(f"Source  : {tip['source']}\n")
+            f.write(f"Trusted : {'Yes' if tip['trusted'] else 'No'}\n")
+            f.write("-" * 50 + "\n")
+    print(f"\n💾 Saved {len(all_tips)} tips to {filename}")
+
+
+# ── Main ──────────────────────────────────────────────────────────────────────
+
+def run(topic: str = "", max_articles: int = 10) -> list:
+    """
+    Full pipeline: search → scrape → extract tips.
+
+    Args:
+        topic: Optional stock/sector focus (e.g. "AI stocks", "dividend stocks")
+        max_articles: Max number of articles to scrape
+
+    Returns:
+        List of extracted tip dicts
+    """
+    queries = build_queries(topic)
+    urls = get_article_urls(queries, results_per_query=5)
+
+    all_tips = []
+    scraped = 0
+
+    for url in urls:
+        if scraped >= max_articles:
+            break
+        print(f"\n📰 Scraping: {url[:80]}")
+        article = scrape_article(url)
+        if article:
+            tips = extract_tips(article)
+            print(f"   → {len(article['paragraphs'])} paragraphs, {len(tips)} tips found")
+            all_tips.extend(tips)
+            scraped += 1
+        time.sleep(1.5)   # be polite — avoid rate limits
+
+    print_results(all_tips)
+    save_to_file(all_tips)
+    return all_tips
+
+
+if __name__ == "__main__":
+    import argparse
+
+    parser = argparse.ArgumentParser(description="Scrape stock tips from web articles")
+    parser.add_argument("--topic", default="", help='Focus topic, e.g. "AI stocks"')
+    parser.add_argument("--max", type=int, default=10, help="Max articles to scrape")
+    args = parser.parse_args()
+
+    run(topic=args.topic, max_articles=args.max)
