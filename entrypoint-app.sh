@@ -13,7 +13,7 @@ echo "Waiting for Qdrant vector database at ${QDRANT_URL}..."
 max_attempts=60
 attempt=0
 while [ $attempt -lt $max_attempts ]; do
-    if curl -s -f "${QDRANT_URL}/health" > /dev/null 2>&1; then
+    if curl -s -f "${QDRANT_URL}/healthz" > /dev/null 2>&1; then
         echo "✓ Qdrant is ready"
         break
     fi

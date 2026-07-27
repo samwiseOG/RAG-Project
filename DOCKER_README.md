@@ -364,7 +364,7 @@ docker run rag-app-snapshot:latest
 curl http://localhost:11434/api/tags
 
 # Check Qdrant
-curl http://localhost:6333/health
+curl http://localhost:6333/healthz
 
 # Check Flask
 curl http://localhost:5001/collections

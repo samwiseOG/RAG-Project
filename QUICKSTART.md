@@ -112,7 +112,7 @@ See [DOCKER_README.md](DOCKER_README.md) for:
 1. **Check UI loads**: Open http://localhost:8501
 2. **Check API responds**: `curl http://localhost:5001/collections`
 3. **Check Ollama models are loaded**: `curl http://localhost:11434/api/tags`
-4. **Check Qdrant is healthy**: `curl http://localhost:6333/health`
+4. **Check Qdrant is healthy**: `curl http://localhost:6333/healthz`
 
 ---
 

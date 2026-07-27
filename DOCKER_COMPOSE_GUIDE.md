@@ -86,7 +86,7 @@ curl http://localhost:11434/api/tags
 # {"models":[{"name":"nomic-embed-text:latest",...},{"name":"deepseek-r1:1.5b:latest",...}]}
 
 # Check Qdrant is healthy
-curl http://localhost:6333/health
+curl http://localhost:6333/healthz
 
 # Expected response:
 # {"status":"ok"}
@@ -159,7 +159,7 @@ docker-compose exec app python -c "import ollama; print(ollama.__version__)"
 docker-compose exec app bash
 
 # Run curl in qdrant service
-docker-compose exec qdrant curl http://localhost:6333/health
+docker-compose exec qdrant curl http://localhost:6333/healthz
 ```
 
 ---
